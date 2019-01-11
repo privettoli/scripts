@@ -1,0 +1,31 @@
+  if [ "$1" != '--continue' ]; then 
+    echo "Removing brew cache" 
+    rm -rf "$(brew --cache)" 
+    echo "Running brew update" 
+    brew update 
+  fi 
+  for c in $(brew cask list); do 
+    repoVersion="$(brew cask info $c | grep $c | head -1 | perl -nle 'print $2 if m{(.+):\s([^\s]+)}')"
+    currentVersion="$(ls -rt /usr/local/Caskroom/$c | tail -n 1)"    
+
+    if [ "$currentVersion" != "latest" -a "$currentVersion" == "$repoVersion" ]; then
+      printf "Up-to-date %15s👌 %s\n" $c $currentVersion
+    else 
+      echo -e "\t  👇 "
+      echo -e "\t\b\b👉  $c 👈 " 
+      if [ "$currentVersion" != "latest" -a "$repoVersion" != "latest" ]; then      
+        echo "Current: ${currentVersion}"
+        echo "Repo   : ${repoVersion}"
+      else
+        echo "No version specified 😞"
+        echo "Reinstall?"
+      fi
+      select ynx in "Yes" "No" "Exit"; do  
+        case $ynx in 
+          "Yes") echo "Uninstalling $c"; brew cask uninstall --force "$c"; echo "Re-installing $c"; brew cask install "$c"; break;; 
+          "No") echo "Skipping $c"; break;; 
+          "Exit") echo "Exiting brew-cask-upgrade"; exit 0;; 
+        esac 
+      done 
+    fi
+  done 
